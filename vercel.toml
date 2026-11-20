@@ -1,0 +1,17 @@
+"$schema" = "https://openapi.vercel.sh/vercel.json"
+
+[services.frontend]
+root = "frontend/"
+
+[services.backend]
+root = "backend/"
+entrypoint = "main:app"
+framework = "fastapi"
+
+[[rewrites]]
+source = "/api/(.*)"
+destination = { service = "backend" }
+
+[[rewrites]]
+source = "/(.*)"
+destination = { service = "frontend" }
