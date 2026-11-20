@@ -1,0 +1,83 @@
+﻿{
+    "name":  "projects/payment-reminder-ai-2026/locations/asia-south1/agents/12d88d77-8d49-4d31-8d41-818248d455bb/flows/00000000-0000-0000-0000-000000000000",
+    "displayName":  "Default Start Flow",
+    "description":  "A start flow created along with the agent",
+    "transitionRoutes":  [
+                             {
+                                 "intent":  "projects/payment-reminder-ai-2026/locations/asia-south1/agents/12d88d77-8d49-4d31-8d41-818248d455bb/intents/00000000-0000-0000-0000-000000000000",
+                                 "triggerFulfillment":  {
+                                                            "messages":  [
+                                                                             {
+                                                                                 "text":  {
+                                                                                              "text":  [
+                                                                                                           "Hi! How are you doing?",
+                                                                                                           "Hello! How can I help you?",
+                                                                                                           "Good day! What can I do for you today?",
+                                                                                                           "Greetings! How can I assist?"
+                                                                                                       ]
+                                                                                          }
+                                                                             }
+                                                                         ]
+                                                        },
+                                 "name":  "93db6ff0-b3fb-47c5-a98d-fec2a7f160d0"
+                             }
+                         ],
+    "eventHandlers":  [
+                          {
+                              "event":  "sys.no-match-default",
+                              "triggerFulfillment":  {
+                                                         "messages":  [
+                                                                          {
+                                                                              "text":  {
+                                                                                           "text":  [
+                                                                                                        "I didn\u0027t get that. Can you say it again?",
+                                                                                                        "I missed what you said. What was that?",
+                                                                                                        "Sorry, could you say that again?",
+                                                                                                        "Sorry, can you say that again?",
+                                                                                                        "Can you say that again?",
+                                                                                                        "Sorry, I didn\u0027t get that. Can you rephrase?",
+                                                                                                        "Sorry, what was that?",
+                                                                                                        "One more time?",
+                                                                                                        "What was that?",
+                                                                                                        "Say that one more time?",
+                                                                                                        "I didn\u0027t get that. Can you repeat?",
+                                                                                                        "I missed that, say that again?"
+                                                                                                    ]
+                                                                                       }
+                                                                          }
+                                                                      ]
+                                                     },
+                              "name":  "49322da1-29eb-4f17-9d15-3d8e3785ab2b"
+                          },
+                          {
+                              "event":  "sys.no-input-default",
+                              "triggerFulfillment":  {
+                                                         "messages":  [
+                                                                          {
+                                                                              "text":  {
+                                                                                           "text":  [
+                                                                                                        "I didn\u0027t get that. Can you say it again?",
+                                                                                                        "I missed what you said. What was that?",
+                                                                                                        "Sorry, could you say that again?",
+                                                                                                        "Sorry, can you say that again?",
+                                                                                                        "Can you say that again?",
+                                                                                                        "Sorry, I didn\u0027t get that. Can you rephrase?",
+                                                                                                        "Sorry, what was that?",
+                                                                                                        "One more time?",
+                                                                                                        "What was that?",
+                                                                                                        "Say that one more time?",
+                                                                                                        "I didn\u0027t get that. Can you repeat?",
+                                                                                                        "I missed that, say that again?"
+                                                                                                    ]
+                                                                                       }
+                                                                          }
+                                                                      ]
+                                                     },
+                              "name":  "4b88b654-ab03-4cbe-b10b-94a1863acca7"
+                          }
+                      ],
+    "nluSettings":  {
+                        "modelType":  "MODEL_TYPE_ADVANCED",
+                        "classificationThreshold":  0.3
+                    }
+}

@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizOSOne | Product Renewal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-icon">B</div>
+            <div>
+                <h2>BizOSOne</h2>
+                <span>Business Solutions</span>
+            </div>
+        </div>
+        <div class="nav-status">
+            <span class="status-dot"></span>
+            Renewal Management
+        </div>
+    </header>
+
+    <main class="container">
+
+        <section class="welcome-section">
+            <div>
+                <p class="eyebrow">PRODUCT RENEWAL PORTAL</p>
+                <h1>Manage Your Business Products</h1>
+                <p class="subtitle">
+                    Explore your BizOSOne products and manage your subscriptions easily.
+                </p>
+            </div>
+        </section>
+
+        <!-- PRODUCT DASHBOARD -->
+        <section class="section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">OUR PRODUCTS</p>
+                    <h2>BizOSOne Solutions</h2>
+                </div>
+                <span class="live-label">Live Product Data</span>
+            </div>
+
+            <div id="productsGrid" class="products-grid">
+                <p class="loading">Loading products...</p>
+            </div>
+        </section>
+
+        <!-- CUSTOMER RENEWAL -->
+        <section class="section renewal-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">CUSTOMER PORTAL</p>
+                    <h2>Check Your Renewal</h2>
+                    <p class="subtitle">
+                        Enter your customer ID to view your assigned product.
+                    </p>
+                </div>
+            </div>
+
+            <form id="customerForm" class="customer-form">
+                <input
+                    type="text"
+                    id="customerId"
+                    placeholder="Enter Customer ID (e.g. CUST1001)"
+                    required
+                >
+                <button type="submit" id="lookupBtn">
+                    View Renewal
+                </button>
+            </form>
+
+            <div id="renewalDetails" class="renewal-details hidden"></div>
+        </section>
+
+        <!-- DIALOGFLOW CHATBOT -->
+        <section class="section chatbot-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">AI ASSISTANT</p>
+                    <h2>BizOSOne Renewal Assistant</h2>
+                    <p class="subtitle">
+                        Chat with our AI assistant for renewal support.
+                    </p>
+                </div>
+                <span class="live-label">AI Assistant</span>
+            </div>
+
+            <div class="chat-window">
+                <div class="chat-header">
+                    <div class="bot-avatar">AI</div>
+                    <div>
+                        <h3>BizOSOne Assistant</h3>
+                        <span>Powered by Dialogflow CX</span>
+                    </div>
+                    <select id="languageSelect" class="language-select" aria-label="Language">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="ar">العربية</option>
+                    </select>
+                    <span class="chat-online">Online</span>
+                </div>
+
+                <div id="chatMessages" class="chat-messages" aria-live="polite">
+                    <div class="message bot-message">
+                        Connecting to the assistant...
+                    </div>
+                </div>
+
+                <form id="chatForm" class="chat-input-area">
+                    <input
+                        type="text"
+                        id="chatInput"
+                        placeholder="Type your message..."
+                        autocomplete="off"
+                    >
+                    <button type="submit" id="sendBtn">Send</button>
+                    <button
+                        type="button"
+                        id="voiceBtn"
+                        class="voice-btn"
+                        title="Voice interaction"
+                    >
+                        🎤
+                    </button>
+                </form>
+
+                <p class="chat-note">
+                    Text and browser voice are available. Voice support depends on your browser.
+                </p>
+            </div>
+        </section>
+
+        <section id="demoCampaignSection" class="section hidden">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">CAMPAIGN MANAGEMENT</p>
+                    <h2>Payment Reminder Campaigns</h2>
+                    <p class="subtitle">
+                        Campaign activity is recorded for testing. No outbound call, SMS, or payment is made.
+                    </p>
+                </div>
+                <span class="live-label">Testing Simulation</span>
+            </div>
+
+            <form id="demoCampaignForm" class="customer-form">
+                <input
+                    type="text"
+                    id="demoCampaignName"
+                    value="Payment Reminder Campaign"
+                    maxlength="200"
+                    aria-label="Campaign name"
+                    required
+                >
+                <button type="submit" id="createDemoCampaignBtn">Create Campaign</button>
+                <button type="button" id="refreshDemoCampaignsBtn" class="secondary-button">
+                    Refresh
+                </button>
+            </form>
+
+            <p id="demoCampaignMessage" class="demo-message" role="status"></p>
+            <div id="demoCampaignList" class="demo-campaign-list"></div>
+            <h3 class="demo-activity-heading">Recent Campaign Activity</h3>
+            <div id="demoActivityList" class="demo-campaign-list"></div>
+        </section>
+
+        <section id="demoPaymentSection" class="section demo-payment-section hidden">
+            <p class="eyebrow">TESTING ONLY</p>
+            <h2 id="demoPaymentTitle">Testing Payment Link</h2>
+            <p id="demoPaymentNotice" class="demo-payment-notice">
+                This page does not accept payments. SMS was not sent, and payment has not been received.
+            </p>
+            <div id="demoPaymentDetails" class="renewal-details"></div>
+        </section>
+
+        <!-- CONFIRMATION SECTION -->
+        <section class="section confirmation-section">
+            <p class="eyebrow">SECURE RENEWAL</p>
+            <h2>Confirm Your Subscription</h2>
+            <p class="subtitle">
+                Review your renewal details before confirming.
+            </p>
+            <div id="confirmationMessage">
+                Your confirmation details will appear here when you open a renewal link.
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>© 2026 BizOSOne. All rights reserved.</p>
+        <span>Product Renewal Management System</span>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
