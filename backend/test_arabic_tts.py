@@ -31,8 +31,8 @@ class FakeSession:
 
 
 class ArabicTtsTests(unittest.TestCase):
-    def tearDown(self):
-        main.get_arabic_tts_voice_name.cache_clear()
+    def setUp(self):
+        main._arabic_tts_voice_name = None
 
     def test_prefers_chirp_then_wavenet_for_ar_xa(self):
         voices = {
@@ -64,7 +64,7 @@ class ArabicTtsTests(unittest.TestCase):
                 "ar-XA-Chirp3-HD-Achernar",
             )
 
-        main.get_arabic_tts_voice_name.cache_clear()
+        main._arabic_tts_voice_name = None
         voices["voices"] = voices["voices"][:2]
         with (
             patch("main.create_google_tts_session"),

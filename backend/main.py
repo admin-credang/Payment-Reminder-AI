@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from google.cloud import dialogflowcx_v3 as dialogflowcx
 from google.auth import default as google_auth_default
 from google.auth.exceptions import GoogleAuthError
+from google.auth import identity_pool, impersonated_credentials
 from google.auth.transport.requests import AuthorizedSession
 from requests.exceptions import RequestException
 import logging
@@ -62,20 +63,70 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 DIALOGFLOW_PROJECT_ID = "payment-reminder-ai-2026"
 DIALOGFLOW_LOCATION = "asia-south1"
 DIALOGFLOW_AGENT_ID = "12d88d77-8d49-4d31-8d41-818248d455bb"
+DIALOGFLOW_SERVICE_ACCOUNT = (
+    "vercel-dialogflow-runtime@payment-reminder-ai-2026.iam.gserviceaccount.com"
+)
+VERCEL_WIF_AUDIENCE = (
+    "//iam.googleapis.com/projects/788525643107/locations/global/"
+    "workloadIdentityPools/vercel-pool/providers/vercel-provider"
+)
 DIALOGFLOW_THANK_YOU_PAGE = (
     f"projects/{DIALOGFLOW_PROJECT_ID}/locations/{DIALOGFLOW_LOCATION}/agents/"
     f"{DIALOGFLOW_AGENT_ID}/flows/00000000-0000-0000-0000-000000000000/"
     "pages/ee9e008b-a1f0-40d0-9271-c352fa90098b"
 )
-dialogflow_client = dialogflowcx.SessionsClient(
-    client_options={
-        "api_endpoint": f"{DIALOGFLOW_LOCATION}-dialogflow.googleapis.com"
-    }
-)
-
 GOOGLE_CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 GOOGLE_TTS_API_ROOT = "https://texttospeech.googleapis.com/v1"
 ARABIC_TTS_LANGUAGE_CODE = "ar-XA"
+_arabic_tts_voice_name: str | None = None
+
+
+class VercelOidcTokenSupplier(identity_pool.SubjectTokenSupplier):
+    def __init__(self, token: str):
+        self._token = token
+
+    def get_subject_token(self, context, request) -> str:
+        return self._token
+
+
+def get_google_credentials(oidc_token: str | None = None):
+    if oidc_token:
+        source_credentials = identity_pool.Credentials(
+            audience=VERCEL_WIF_AUDIENCE,
+            subject_token_type="urn:ietf:params:oauth:token-type:jwt",
+            subject_token_supplier=VercelOidcTokenSupplier(oidc_token),
+            scopes=[GOOGLE_CLOUD_PLATFORM_SCOPE],
+        )
+        return impersonated_credentials.Credentials(
+            source_credentials=source_credentials,
+            target_principal=DIALOGFLOW_SERVICE_ACCOUNT,
+            target_scopes=[GOOGLE_CLOUD_PLATFORM_SCOPE],
+        )
+
+    if os.getenv("VERCEL") == "1":
+        raise GoogleAuthError("Missing Vercel OIDC request token")
+
+    credentials, _ = google_auth_default(
+        scopes=[GOOGLE_CLOUD_PLATFORM_SCOPE]
+    )
+    return credentials
+
+
+def get_dialogflow_client(oidc_token: str | None = None):
+    try:
+        credentials = get_google_credentials(oidc_token)
+    except (GoogleAuthError, ValueError):
+        raise HTTPException(
+            status_code=500,
+            detail="Google Cloud credentials are unavailable or invalid",
+        ) from None
+
+    return dialogflowcx.SessionsClient(
+        credentials=credentials,
+        client_options={
+            "api_endpoint": f"{DIALOGFLOW_LOCATION}-dialogflow.googleapis.com"
+        },
+    )
 
 
 class GoogleTTSUnavailableError(Exception):
@@ -85,12 +136,12 @@ class GoogleTTSUnavailableError(Exception):
         self.reason = reason
 
 
-def create_google_tts_session() -> AuthorizedSession:
+def create_google_tts_session(
+    oidc_token: str | None = None,
+) -> AuthorizedSession:
     try:
-        credentials, _ = google_auth_default(
-            scopes=[GOOGLE_CLOUD_PLATFORM_SCOPE]
-        )
-    except GoogleAuthError as error:
+        credentials = get_google_credentials(oidc_token)
+    except (GoogleAuthError, ValueError) as error:
         raise GoogleTTSUnavailableError(
             None,
             "credentials_unavailable",
@@ -164,9 +215,12 @@ def google_tts_json_request(
     return response_data
 
 
-@lru_cache(maxsize=1)
-def get_arabic_tts_voice_name() -> str:
-    session = create_google_tts_session()
+def get_arabic_tts_voice_name(oidc_token: str | None = None) -> str:
+    global _arabic_tts_voice_name
+    if _arabic_tts_voice_name:
+        return _arabic_tts_voice_name
+
+    session = create_google_tts_session(oidc_token)
     response_data = google_tts_json_request(
         session,
         "GET",
@@ -190,18 +244,22 @@ def get_arabic_tts_voice_name() -> str:
             if family in voice["name"].casefold()
         )
         if matching_names:
-            return matching_names[0]
+            _arabic_tts_voice_name = matching_names[0]
+            return _arabic_tts_voice_name
     raise GoogleTTSUnavailableError(None, "no_supported_arabic_voice")
 
 
-def synthesize_arabic_tts(text: str) -> str:
+def synthesize_arabic_tts(
+    text: str,
+    oidc_token: str | None = None,
+) -> str:
     if not text or not text.strip():
         raise GoogleTTSUnavailableError(None, "empty_text")
     if len(text.encode("utf-8")) > 5000:
         raise GoogleTTSUnavailableError(None, "text_too_long")
 
-    session = create_google_tts_session()
-    voice_name = get_arabic_tts_voice_name()
+    session = create_google_tts_session(oidc_token)
+    voice_name = get_arabic_tts_voice_name(oidc_token)
     response_data = google_tts_json_request(
         session,
         "POST",
@@ -826,13 +884,20 @@ def validate_dialogflow_date(value, utterance: str) -> str:
     return parsed.isoformat()
 
 
-def dialogflow_text(message: str, session_id: str, language_code: str, session_parameters=None):
+def dialogflow_text(
+    message: str,
+    session_id: str,
+    language_code: str,
+    session_parameters=None,
+    oidc_token: str | None = None,
+):
+    client = get_dialogflow_client(oidc_token)
     query_input = dialogflowcx.QueryInput(
         text=dialogflowcx.TextInput(text=message),
         language_code=language_code,
     )
     detect_request = dialogflowcx.DetectIntentRequest(
-        session=dialogflow_client.session_path(
+        session=client.session_path(
             DIALOGFLOW_PROJECT_ID,
             DIALOGFLOW_LOCATION,
             DIALOGFLOW_AGENT_ID,
@@ -844,7 +909,7 @@ def dialogflow_text(message: str, session_id: str, language_code: str, session_p
         detect_request.query_params = dialogflowcx.QueryParameters(
             parameters=session_parameters
         )
-    result = dialogflow_client.detect_intent(request=detect_request).query_result
+    result = client.detect_intent(request=detect_request).query_result
     replies = [
         text
         for item in result.response_messages
@@ -1407,6 +1472,7 @@ async def start_outbound_voice(request: Request):
             "campaign_id": request.query_params.get("campaign_id"),
             "call_sid": call_sid,
         },
+        oidc_token=request.headers.get("x-vercel-oidc-token"),
     )
     action_url = f"{PUBLIC_BASE_URL}{request.url.path}?{request.url.query}"
     action_url = action_url.replace("/voice/start?", "/voice/turn?")
@@ -1439,6 +1505,7 @@ async def continue_outbound_voice(request: Request):
                 "campaign_id": request.query_params.get("campaign_id"),
                 "call_sid": call_sid,
             },
+            oidc_token=request.headers.get("x-vercel-oidc-token"),
         )
     else:
         reply = {
@@ -2308,12 +2375,14 @@ def create_payment_followup(payload: PaymentFollowupRequest):
 # 9. CHAT WITH DIALOGFLOW CX
 
 @app.post("/chat")
-def chat_with_dialogflow(request: ChatRequest):
+def chat_with_dialogflow(request: ChatRequest, http_request: Request):
     try:
         # Reuse the session ID to preserve conversation context
         session_id = request.session_id or str(uuid4())
+        oidc_token = http_request.headers.get("x-vercel-oidc-token")
+        client = get_dialogflow_client(oidc_token)
 
-        session_path = dialogflow_client.session_path(
+        session_path = client.session_path(
             DIALOGFLOW_PROJECT_ID,
             DIALOGFLOW_LOCATION,
             DIALOGFLOW_AGENT_ID,
@@ -2332,7 +2401,7 @@ def chat_with_dialogflow(request: ChatRequest):
             query_input=query_input
         )
 
-        response = dialogflow_client.detect_intent(
+        response = client.detect_intent(
             request=detect_request
         )
 
@@ -2439,7 +2508,10 @@ def chat_with_dialogflow(request: ChatRequest):
         }
         if request.language_code == "ar":
             try:
-                chat_response["audio_base64"] = synthesize_arabic_tts(reply)
+                chat_response["audio_base64"] = synthesize_arabic_tts(
+                    reply,
+                    oidc_token,
+                )
                 chat_response["audio_error"] = None
             except GoogleTTSUnavailableError as error:
                 logger.warning(
